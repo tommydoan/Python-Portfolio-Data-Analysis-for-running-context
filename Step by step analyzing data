@@ -1,0 +1,143 @@
+import pandas as pd
+import seaborn as sns
+
+df = pd.read_csv("TWO_CENTURIES_OF_UM_RACES.csv")
+
+df.sample(3)
+
+#Filter name : "Everglades 50 Mile Ultra Run (USA)"
+df[df['Event name'] == 'Everglades 50 Mile Ultra Run (USA)']
+
+#Filter only country USA
+df[df['Event name'].str.split('(').str.get(1).str.split(')').str.get(0) == 'USA']
+
+# Filter year only in 2020
+df[df['Year of event']== 2020]
+
+# Filter combine year = 2020 and country = USA
+df1 = df[(df['Event name'].str.split('(').str.get(1).str.split(')').str.get(0) == 'USA')& (df['Year of event']== 2020)]
+
+df1.sample(25)
+
+
+#Filter Event distance/length in 50km and 50 mi
+df1 = df1[df1['Event distance/length'].isin(['50km', '50mi'])]
+
+df1.sample(25)
+
+# In Event name, filter only name of event, no need USA
+df1['Event name'] = df1['Event name'].str.split('(').str.get(0)
+
+df1.head()
+
+# Create column 'event_month' only filter the month on column ' Event dates'
+df1['event_month'] = df1['Event dates'].str.split('.').str.get(1).str.split('.').str.get(0)
+
+# Delete columns unused
+df1 = df1.drop(columns=(['Event dates','Athlete club', 'Athlete age category']))
+
+df1.info()
+
+#Check NA values
+# df1.isna().sum()
+df1.head()
+
+#Delete NA values
+df1.isnull().sum()
+
+#Filter NA values
+df1 = df1[~(df1['Athlete year of birth'].isna())]
+
+df1.isna().sum()
+df1.info()
+
+#Change type data 
+df1['Athlete year of birth'] = df1['Athlete year of birth'].astype(int)
+
+df1['Athlete average speed'] = df1['Athlete average speed'].astype(float)
+
+df1['event_month'] = df1['event_month'].astype(int)
+
+df1['athlete_age'] = df1['Year of event'] - df1['Athlete year of birth']
+
+df1.info()
+
+#Rearange columns 
+df1 = df1.rename(columns = {
+         'Year of event': 'year' ,            
+         'Event name'  : 'name',
+         'Event distance/length' : 'distance',
+        'Event number of finishers' : 'total_finish',
+        'Athlete performance'  : 'athlete_performance',
+        'Athlete country'  : 'athlete_country',
+         'Athlete year of birth' : 'year_of_birth',
+        'Athlete gender'  : 'athlete_gender',
+         'Athlete average speed' : 'avg_speed',
+         'Athlete ID': 'athlete_id'
+})
+
+df1 = df1.rename(columns = {
+         'year_of_event': 'year' ,            
+         'event_name'  : 'name',
+         'event_distance' : 'distance',
+        'event_total_finish' : 'total_finishers'
+})
+
+df1.head()
+
+#Filter hours of athlete performance without 'h' character
+df1['athlete_performance'] = df1['athlete_performance'].str.split(' ').str.get(0)
+
+#Rearange order of columns for new data set
+df1 = df1[['athlete_id','year','event_month', 'athlete_age', 'athlete_gender', 'name', 'distance', 'total_finish', 'athlete_performance', 'athlete_country', 'year_of_birth', 'avg_speed']]
+
+#Rename column 'name' to 'event_name' because of mistaken
+df1 = df1.rename(columns ={
+    'name' : 'event_name'
+})
+
+#Drop column 'year_of_birth' because we already had the name column 'athlete_age
+df1 = df1.drop(columns='year_of_birth')
+
+df1.head()
+
+#Vusualization with history chart bar
+ax = sns.histplot(df1, x = 'distance')
+
+# History chart with gender
+ax = sns.histplot(df1, x = 'distance', hue = 'athlete_gender', )
+ax.set_title('Analyze distance with gender')
+
+#Visualization with violin chart
+ax = sns.violinplot(df1, y = 'avg_speed', x ='distance', hue = 'athlete_gender', split = True, inner = 'quart')
+ax.set_title('Compare average between athlete_gender in each type of distance')
+
+#Visualyze lm chart 
+ax = sns.lmplot(df1, x = 'avg_speed', y = 'athlete_age', hue = 'athlete_gender',)
+
+#Try to visualyze with scatter chart to compare with lm chart for visual clarify
+ax = sns.scatterplot(df1, x = 'avg_speed', y = 'athlete_age', hue = 'athlete_gender', alpha = 0.7)
+
+# Set up the period time for specifictly season column
+spring : 1 - 3
+summer : 4 - 6
+fall : 7 - 9
+winter : 10 - 12
+
+#Create season name coressponding with event_month
+df1['season'] = df1['event_month'].apply(lambda x : 'winter' if x < 1 else 'spring' if x < 4 else 'summer' if x < 7 else 'fall' if x < 10 else 'winter' )
+
+
+df1.sample(25)
+
+#Reindex data sex 
+df1 = df1.reset_index()
+df1.head(5)
+
+#Exporing the different average speed when comparing with each season which had created above
+df1.groupby('season')['avg_speed'].agg(['mean','count']).sort_values('mean', ascending = False)
+
+#Try to analyze another options to get understand with average speed
+ax = sns.barplot(df1, x = 'season', y = 'avg_speed', errorbar = None, palette = ['orange', 'grey', 'grey', 'grey'],)
+ax.set_title('Comparing average speed with each season')
+
